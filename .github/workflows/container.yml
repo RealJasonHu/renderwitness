@@ -1,0 +1,27 @@
+name: Container
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Containerfile"
+      - "pyproject.toml"
+      - "src/**"
+      - ".github/workflows/container.yml"
+  pull_request:
+    paths:
+      - "Containerfile"
+      - "pyproject.toml"
+      - "src/**"
+      - ".github/workflows/container.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --file Containerfile --tag renderwitness:test .
+      - run: docker run --rm renderwitness:test --help

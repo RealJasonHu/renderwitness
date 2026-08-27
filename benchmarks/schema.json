@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/RealJasonHu/renderwitness/main/benchmarks/schema.json",
+  "title": "RenderWitness benchmark case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "title", "assets", "ground_truth", "evaluation"],
+  "properties": {
+    "$schema": { "type": "string", "format": "uri-reference" },
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "candidate", "width", "height"],
+      "properties": {
+        "baseline": { "type": "string" },
+        "candidate": { "type": "string" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "locale": { "type": "string" }
+      }
+    },
+    "ground_truth": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "category",
+          "severity",
+          "decision",
+          "summary",
+          "expected_region",
+          "user_impact",
+          "evidence"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "category": { "type": "string" },
+          "severity": { "enum": ["ignore", "minor", "major", "critical"] },
+          "decision": { "enum": ["ignore", "review", "fail"] },
+          "summary": { "type": "string" },
+          "expected_region": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["x", "y", "width", "height"],
+            "properties": {
+              "x": { "type": "integer", "minimum": 0 },
+              "y": { "type": "integer", "minimum": 0 },
+              "width": { "type": "integer", "minimum": 1 },
+              "height": { "type": "integer", "minimum": 1 }
+            }
+          },
+          "user_impact": { "type": "string" },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_failure_recall",
+        "maximum_cosmetic_false_positive_rate",
+        "minimum_region_iou"
+      ],
+      "properties": {
+        "required_failure_recall": { "type": "number", "minimum": 0, "maximum": 1 },
+        "maximum_cosmetic_false_positive_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minimum_region_iou": { "type": "number", "minimum": 0, "maximum": 1 },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

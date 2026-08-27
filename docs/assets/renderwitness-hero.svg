@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">RenderWitness visual regression report</title>
+  <desc id="desc">A dark interface showing a baseline and candidate screenshot comparison, highlighted evidence regions, and semantic VLM findings.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07131f"/>
+      <stop offset="0.55" stop-color="#0b1d2a"/>
+      <stop offset="1" stop-color="#102e35"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#53e3c2"/>
+      <stop offset="1" stop-color="#72a7ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="28" flood-color="#000" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1050" cy="-40" r="290" fill="#1e665d" opacity=".18"/>
+  <circle cx="80" cy="650" r="270" fill="#254b84" opacity=".2"/>
+
+  <g transform="translate(68 58)">
+    <path d="M29 0 54 14v29L29 58 4 43V14Z" fill="none" stroke="url(#accent)" stroke-width="4"/>
+    <path d="M15 29c8-12 20-12 28 0-8 12-20 12-28 0Z" fill="none" stroke="#d9fff7" stroke-width="3"/>
+    <circle cx="29" cy="29" r="5" fill="#53e3c2"/>
+    <text x="76" y="27" fill="#f2fbff" font-family="Inter, ui-sans-serif, system-ui" font-size="26" font-weight="700" letter-spacing=".5">RenderWitness</text>
+    <text x="76" y="50" fill="#8aa5b5" font-family="Inter, ui-sans-serif, system-ui" font-size="14" letter-spacing="1.3">SEMANTIC VISUAL REGRESSION REVIEW</text>
+  </g>
+
+  <text x="68" y="168" fill="#f4fbff" font-family="Inter, ui-sans-serif, system-ui" font-size="45" font-weight="740">Pixels changed.</text>
+  <text x="68" y="218" fill="url(#accent)" font-family="Inter, ui-sans-serif, system-ui" font-size="45" font-weight="740">Did the experience break?</text>
+  <text x="70" y="258" fill="#9db2bf" font-family="Inter, ui-sans-serif, system-ui" font-size="18">Deterministic regions + grounded VLM findings + portable evidence.</text>
+
+  <g transform="translate(68 304)" filter="url(#shadow)">
+    <rect width="1064" height="270" rx="18" fill="#0c1823" stroke="#29404d"/>
+    <rect x="1" y="1" width="1062" height="42" rx="17" fill="#12232f"/>
+    <circle cx="23" cy="22" r="5" fill="#ff6b6b"/>
+    <circle cx="41" cy="22" r="5" fill="#f7c65d"/>
+    <circle cx="59" cy="22" r="5" fill="#53e3a4"/>
+    <text x="84" y="27" fill="#7f98a7" font-family="ui-monospace, monospace" font-size="12">reports/demo/report.html</text>
+
+    <g transform="translate(24 62)">
+      <text x="0" y="0" fill="#8fa9b9" font-family="Inter, ui-sans-serif, system-ui" font-size="11" font-weight="700" letter-spacing="1.5">BASELINE</text>
+      <rect y="13" width="302" height="170" rx="9" fill="#eef3f6"/>
+      <rect x="18" y="31" width="66" height="134" rx="5" fill="#172b36"/>
+      <circle cx="38" cy="49" r="7" fill="#53e3c2"/>
+      <rect x="100" y="34" width="170" height="14" rx="4" fill="#b9c9d0"/>
+      <rect x="100" y="62" width="84" height="67" rx="6" fill="#fff" stroke="#cdd9de"/>
+      <rect x="193" y="62" width="84" height="67" rx="6" fill="#fff" stroke="#cdd9de"/>
+      <rect x="100" y="142" width="177" height="22" rx="6" fill="#217d71"/>
+      <text x="145" y="157" fill="#fff" font-family="Inter, ui-sans-serif, system-ui" font-size="9">Deploy container</text>
+
+      <text x="326" y="0" fill="#8fa9b9" font-family="Inter, ui-sans-serif, system-ui" font-size="11" font-weight="700" letter-spacing="1.5">CANDIDATE</text>
+      <rect x="326" y="13" width="302" height="170" rx="9" fill="#eef3f6"/>
+      <rect x="344" y="31" width="66" height="134" rx="5" fill="#172b36"/>
+      <rect x="426" y="34" width="170" height="14" rx="4" fill="#b9c9d0"/>
+      <rect x="426" y="62" width="84" height="67" rx="6" fill="#fff" stroke="#cdd9de"/>
+      <rect x="519" y="62" width="84" height="67" rx="6" fill="#fff" stroke="#cdd9de"/>
+      <rect x="426" y="142" width="106" height="22" rx="6" fill="#217d71"/>
+      <text x="439" y="157" fill="#fff" font-family="Inter, ui-sans-serif, system-ui" font-size="9">Deploy cont…</text>
+      <rect x="420" y="136" width="119" height="34" rx="5" fill="none" stroke="#ffbd5a" stroke-width="3"/>
+      <rect x="338" y="25" width="78" height="46" rx="5" fill="none" stroke="#ff6b7e" stroke-width="3"/>
+    </g>
+
+    <g transform="translate(676 63)">
+      <text x="0" y="0" fill="#8fa9b9" font-family="Inter, ui-sans-serif, system-ui" font-size="11" font-weight="700" letter-spacing="1.5">VLM FINDINGS</text>
+      <g transform="translate(0 16)">
+        <rect width="338" height="67" rx="9" fill="#201a18" stroke="#6f4d2c"/>
+        <rect x="14" y="13" width="51" height="18" rx="9" fill="#72451f"/>
+        <text x="25" y="26" fill="#ffd595" font-family="Inter, ui-sans-serif, system-ui" font-size="9" font-weight="700">MAJOR</text>
+        <text x="77" y="27" fill="#f3f8fb" font-family="Inter, ui-sans-serif, system-ui" font-size="12" font-weight="700">Localized CTA is clipped</text>
+        <text x="14" y="50" fill="#aabcc6" font-family="Inter, ui-sans-serif, system-ui" font-size="10">Evidence 02 · confidence 0.94</text>
+      </g>
+      <g transform="translate(0 92)">
+        <rect width="338" height="67" rx="9" fill="#20171d" stroke="#704050"/>
+        <rect x="14" y="13" width="57" height="18" rx="9" fill="#762b43"/>
+        <text x="24" y="26" fill="#ffb2c0" font-family="Inter, ui-sans-serif, system-ui" font-size="9" font-weight="700">CRITICAL</text>
+        <text x="83" y="27" fill="#f3f8fb" font-family="Inter, ui-sans-serif, system-ui" font-size="12" font-weight="700">Navigation control disappeared</text>
+        <text x="14" y="50" fill="#aabcc6" font-family="Inter, ui-sans-serif, system-ui" font-size="10">Evidence 01 · confidence 0.98</text>
+      </g>
+      <text x="0" y="184" fill="#67808e" font-family="Inter, ui-sans-serif, system-ui" font-size="10">3 deterministic ROIs · 2 actionable regressions · 1 cosmetic change</text>
+    </g>
+  </g>
+</svg>

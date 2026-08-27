@@ -1,0 +1,51 @@
+services:
+  ollama:
+    image: ollama/ollama:0.12.7
+    profiles: ["local-vlm"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ollama-init:
+    image: ollama/ollama:0.12.7
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama"]
+    command: ["pull", "qwen3-vl:4b"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    profiles: ["local-vlm"]
+
+  renderwitness:
+    build:
+      context: .
+      dockerfile: Containerfile
+    environment:
+      RENDERWITNESS_BASE_URL: http://ollama:11434/v1
+      RENDERWITNESS_API_KEY: ollama
+      RENDERWITNESS_MODEL: qwen3-vl:4b
+    volumes:
+      - ./examples:/workspace/examples:ro
+      - ./reports:/workspace/reports
+    command:
+      - compare
+      - examples/baseline.png
+      - examples/candidate.png
+      - --provider
+      - openai-compatible
+      - --output
+      - reports/local-vlm
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+    profiles: ["local-vlm"]
+
+volumes:
+  ollama-data:

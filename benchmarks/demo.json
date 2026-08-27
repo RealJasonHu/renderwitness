@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "dashboard-pr-42",
+  "title": "Developer dashboard semantic regression demo",
+  "description": "A controlled before/after pair with one cosmetic change and two user-facing regressions.",
+  "assets": {
+    "baseline": "../examples/baseline.png",
+    "candidate": "../examples/candidate.png",
+    "width": 1440,
+    "height": 900,
+    "locale": "zh-CN"
+  },
+  "ground_truth": [
+    {
+      "id": "shadow-style-adjustment",
+      "category": "cosmetic",
+      "severity": "ignore",
+      "decision": "ignore",
+      "summary": "Dashboard card shadows are slightly softer and more diffuse.",
+      "expected_region": {
+        "x": 270,
+        "y": 108,
+        "width": 1144,
+        "height": 770
+      },
+      "user_impact": "none",
+      "evidence": "Card geometry, text, values, and interactions are unchanged."
+    },
+    {
+      "id": "clipped-cjk-cta",
+      "category": "text_clipping",
+      "severity": "critical",
+      "decision": "fail",
+      "summary": "The Chinese CTA label is clipped inside its unchanged button bounds.",
+      "expected_region": {
+        "x": 1146,
+        "y": 798,
+        "width": 198,
+        "height": 44
+      },
+      "user_impact": "The primary action is no longer legible to zh-CN users.",
+      "evidence": "Baseline reads ‘查看完整报告’; candidate exposes only a clipped fragment."
+    },
+    {
+      "id": "missing-refresh-affordance",
+      "category": "missing_control",
+      "severity": "major",
+      "decision": "fail",
+      "summary": "The refresh glyph disappears while its empty button hit target remains.",
+      "expected_region": {
+        "x": 1204,
+        "y": 25,
+        "width": 42,
+        "height": 42
+      },
+      "user_impact": "Users cannot discover the refresh action visually.",
+      "evidence": "The circular arrow is visible in baseline and absent in candidate."
+    }
+  ],
+  "evaluation": {
+    "required_failure_recall": 1.0,
+    "maximum_cosmetic_false_positive_rate": 0.0,
+    "minimum_region_iou": 0.25,
+    "notes": "The broad shadow region is intentionally excluded from strict localization scoring."
+  }
+}

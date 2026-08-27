@@ -1,0 +1,68 @@
+version: 1
+
+project: shop-web
+description: >-
+  Deterministic bilingual dashboard checks used by the RenderWitness demo.
+
+runner:
+  engine: podman
+  rootless: true
+  network: none
+  read_only: true
+  resources:
+    cpus: 1
+    memory: 512MiB
+  baseline:
+    image: localhost/shop-web:baseline
+    port: 4173
+  candidate:
+    image: localhost/shop-web:pr-42
+    port: 4173
+  healthcheck:
+    path: /healthz
+    timeout_seconds: 30
+
+capture:
+  color_scheme: light
+  reduced_motion: reduce
+  timezone: Asia/Shanghai
+  wait_for:
+    selector: '[data-renderwitness-ready="true"]'
+    timeout_ms: 10000
+  disable_animations: true
+
+scenarios:
+  - id: overview-desktop-zh
+    name: 中文桌面质量总览
+    path: /overview?fixture=pr-42
+    locale: zh-CN
+    viewport:
+      width: 1440
+      height: 900
+    assertions:
+      - role: button
+        name: 重新运行
+      - role: button
+        name: 刷新检查
+
+  - id: checkout-mobile-zh
+    name: 中文移动端结账
+    path: /checkout?fixture=clipped-cjk
+    locale: zh-CN
+    viewport:
+      width: 390
+      height: 844
+    assertions:
+      - role: button
+        name: 查看完整报告
+
+  - id: overview-desktop-en
+    name: English desktop overview
+    path: /overview?fixture=pr-42
+    locale: en-US
+    viewport:
+      width: 1440
+      height: 900
+    assertions:
+      - role: button
+        name: Rerun
