@@ -232,4 +232,4 @@ Chromium job checks actual capture and report interactions, then saves the brows
 - Reports embed source screenshots and include paths and metadata. Review their contents before
   sharing them. Ignore regions do not redact report screenshots.
 
-Created by [Zhexun Hu](https://github.com/RealJasonHu). Licensed under the [MIT License](LICENSE).
+Created by [Jason Hu](https://github.com/RealJasonHu). Licensed under the [MIT License](LICENSE).
