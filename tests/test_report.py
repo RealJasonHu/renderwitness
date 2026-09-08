@@ -73,8 +73,8 @@ def test_write_report_creates_portable_html_and_canonical_json(
     html = paths.html.read_text(encoding="utf-8")
     payload = json.loads(paths.json.read_text(encoding="utf-8"))
     assert html.startswith("<!doctype html>")
-    assert html.count("data:image/png;base64,") == 2
-    assert html.count('class="roi"') == len(result.comparison.regions)
+    assert html.count("data:image/png;base64,") == 3
+    assert html.count('class="roi"') == 3 * len(result.comparison.regions)
     assert "fixed · fixture-v1" in html
     assert "CTA is clipped" in html
     assert payload == result.model_dump(mode="json")
@@ -150,3 +150,40 @@ def test_report_output_must_be_a_directory(image_pair: tuple[Path, Path], tmp_pa
 
     with pytest.raises(ReportError, match="directory|create output"):
         write_report(result, baseline, candidate, occupied)
+
+
+@pytest.mark.parametrize("changed_source", ["baseline", "candidate"])
+def test_report_rejects_evidence_changed_after_comparison(
+    image_pair: tuple[Path, Path], changed_source: str, tmp_path: Path
+) -> None:
+    from PIL import Image
+
+    baseline, candidate = image_pair
+    result = build_analysis(baseline, candidate)
+    target = baseline if changed_source == "baseline" else candidate
+    Image.new("RGB", (96, 72), "#123456").save(target)
+
+    with pytest.raises(ReportError, match="changed since comparison.*SHA-256"):
+        write_report(result, baseline, candidate, tmp_path / "stale-report")
+    assert not (tmp_path / "stale-report" / "index.html").exists()
+    assert not (tmp_path / "stale-report" / "report.json").exists()
+
+
+def test_report_accepts_identical_evidence_relocated_to_another_directory(
+    image_pair: tuple[Path, Path], tmp_path: Path
+) -> None:
+    baseline, candidate = image_pair
+    result = build_analysis(baseline, candidate)
+    relocated = tmp_path / "relocated"
+    relocated.mkdir()
+    copied_baseline = relocated / "before.png"
+    copied_candidate = relocated / "after.png"
+    copied_baseline.write_bytes(baseline.read_bytes())
+    copied_candidate.write_bytes(candidate.read_bytes())
+    baseline.unlink()
+    candidate.unlink()
+
+    document = render_html(result, copied_baseline, copied_candidate)
+
+    assert "source hashes verified" in document
+    assert result.comparison.baseline.sha256 in document

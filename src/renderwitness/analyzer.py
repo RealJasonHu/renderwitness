@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from time import perf_counter
 
 from .diff import compare_images
-from .models import AnalysisResult, ComparisonResult
+from .models import AnalysisResult, BoundingBox, ComparisonResult
 from .providers import DemoProvider, ProviderError, VisionProvider
 
 
@@ -70,6 +71,7 @@ def compare_and_analyze(
     region_padding: int = 24,
     max_image_bytes: int = 25 * 1024 * 1024,
     max_pixels: int = 40_000_000,
+    ignore_regions: Sequence[BoundingBox] = (),
 ) -> AnalysisResult:
     """Convenience API for the complete in-process pipeline."""
 
@@ -83,6 +85,7 @@ def compare_and_analyze(
         region_padding=region_padding,
         max_image_bytes=max_image_bytes,
         max_pixels=max_pixels,
+        ignore_regions=ignore_regions,
     )
     return analyze(
         comparison,

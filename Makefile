@@ -1,4 +1,4 @@
-.PHONY: install lint format test coverage demo build clean
+.PHONY: install lint format test coverage demo browser-demo browser-test build clean
 
 install:
 	python -m pip install -e '.[dev]'
@@ -20,6 +20,12 @@ coverage:
 
 demo:
 	renderwitness demo --output reports/demo
+
+browser-demo:
+	python scripts/run_browser_demo.py
+
+browser-test:
+	RENDERWITNESS_BROWSER_TESTS=1 pytest tests/test_capture.py tests/test_report_browser.py
 
 build:
 	python -m build

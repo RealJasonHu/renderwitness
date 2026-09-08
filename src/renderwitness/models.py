@@ -49,6 +49,23 @@ class BoundingBox(RenderWitnessModel):
         return self.y + self.height
 
 
+def _rectangle_union_area(boxes: list[BoundingBox]) -> int:
+    """Count overlapping exclusions exactly without allocating a pixel canvas."""
+    edges = sorted({edge for box in boxes for edge in (box.x, box.right)})
+    area = 0
+    for left, right in zip(edges, edges[1:], strict=False):
+        intervals = sorted(
+            (box.y, box.bottom) for box in boxes if box.x < right and box.right > left
+        )
+        height = 0
+        end = 0
+        for start, bottom in intervals:
+            height += max(0, bottom - max(start, end))
+            end = max(end, bottom)
+        area += (right - left) * height
+    return area
+
+
 class DiffRegion(RenderWitnessModel):
     """A connected region of pixels that differs between two images."""
 
@@ -104,6 +121,8 @@ class ComparisonResult(RenderWitnessModel):
     region_padding: int = Field(default=24, ge=0, le=256)
     changed_pixels: int = Field(ge=0)
     total_pixels: int = Field(gt=0)
+    ignored_regions: list[BoundingBox] = Field(default_factory=list, max_length=200)
+    ignored_pixels: int = Field(default=0, ge=0)
     change_ratio: float = Field(ge=0.0, le=1.0)
     identical: bool
     regions: list[DiffRegion] = Field(default_factory=list, max_length=200)
@@ -114,22 +133,29 @@ class ComparisonResult(RenderWitnessModel):
         expected_total = self.width * self.height
         if self.total_pixels != expected_total:
             raise ValueError("total_pixels must equal width * height")
-        if self.changed_pixels > self.total_pixels:
-            raise ValueError("changed_pixels cannot exceed total_pixels")
+        if self.ignored_pixels >= self.total_pixels:
+            raise ValueError("ignored regions must leave at least one pixel to compare")
+        if self.changed_pixels > self.total_pixels - self.ignored_pixels:
+            raise ValueError("changed_pixels cannot exceed total_pixels minus ignored_pixels")
         if self.identical != (self.changed_pixels == 0):
             raise ValueError("identical must match whether changed_pixels is zero")
         if not math.isclose(
             self.change_ratio,
-            self.changed_pixels / self.total_pixels,
+            self.changed_pixels / (self.total_pixels - self.ignored_pixels),
             rel_tol=1e-9,
             abs_tol=1e-12,
         ):
-            raise ValueError("change_ratio must equal changed_pixels / total_pixels")
+            raise ValueError("change_ratio must equal changed_pixels / non-ignored pixels")
         if (self.baseline.width, self.baseline.height) != (self.width, self.height):
             raise ValueError("baseline dimensions must match comparison dimensions")
         if (self.candidate.width, self.candidate.height) != (self.width, self.height):
             raise ValueError("candidate dimensions must match comparison dimensions")
         region_ids: set[str] = set()
+        for box in self.ignored_regions:
+            if box.right > self.width or box.bottom > self.height:
+                raise ValueError("ignored region exceeds comparison dimensions")
+        if self.ignored_pixels != _rectangle_union_area(self.ignored_regions):
+            raise ValueError("ignored_pixels must equal the union area of ignored_regions")
         for region in self.regions:
             if region.id in region_ids:
                 raise ValueError(f"duplicate region id: {region.id}")

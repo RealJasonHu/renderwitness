@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import base64
 import json
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
+from PIL import Image
 
 from renderwitness.diff import compare_images
+from renderwitness.models import BoundingBox
 from renderwitness.providers import (
     DemoProvider,
     OpenAICompatibleProvider,
@@ -396,3 +400,38 @@ def test_renderwitness_environment_has_priority_over_openai_fallbacks(
     assert provider.endpoint == "https://renderwitness.test/v1/chat/completions"
     assert provider.model == "private-vlm"
     assert provider.api_key == "private-key"
+
+
+def test_ignored_regions_are_neutralized_in_model_inputs(image_pair, monkeypatch) -> None:
+    baseline, candidate = image_pair
+    comparison = compare_images(
+        baseline, candidate, ignore_regions=[BoundingBox(x=12, y=10, width=20, height=16)]
+    )
+    FakeClient.calls = []
+    FakeClient.response = response_with_content(
+        json.dumps({"summary": "Review", "verdict": "review", "findings": []})
+    )
+    monkeypatch.setattr("renderwitness.providers.httpx.Client", FakeClient)
+    OpenAICompatibleProvider(model="test").analyze(comparison, baseline, candidate)
+    parts = FakeClient.calls[0]["json"]["messages"][1]["content"]
+    assert '"ignored_pixels":320' in parts[0]["text"]
+    for part in parts[1:]:
+        data = base64.b64decode(part["image_url"]["url"].split(",", 1)[1])
+        with Image.open(BytesIO(data)) as image:
+            assert image.getpixel((12, 10)) == (209, 213, 219)
+            assert image.getpixel((31, 25)) == (209, 213, 219)
+    with Image.open(baseline) as original:
+        assert original.getpixel((12, 10)) == (255, 255, 255)
+
+
+def test_provider_refuses_changed_evidence_before_network(image_pair, monkeypatch) -> None:
+    baseline, candidate = image_pair
+    comparison = compare_images(baseline, candidate)
+    Image.new("RGB", (96, 72), "red").save(candidate)
+
+    def no_network(*args, **kwargs):
+        raise AssertionError("Stale evidence must not be sent")
+
+    monkeypatch.setattr("renderwitness.providers.httpx.Client", no_network)
+    with pytest.raises(ProviderError, match="changed since comparison"):
+        OpenAICompatibleProvider(model="test").analyze(comparison, baseline, candidate)

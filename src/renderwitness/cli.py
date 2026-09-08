@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import shutil
 import sys
@@ -14,8 +15,39 @@ from pydantic import ValidationError
 
 from .analyzer import AnalysisError, analyze
 from .diff import ComparisonError, compare_images
+from .models import AnalysisResult, BoundingBox, Severity, Verdict
+from .policy import GatePolicy, evaluate_policy
 from .providers import ProviderError, create_provider
-from .report import ReportError, write_report
+from .report import ReportError, _atomic_write, write_report
+from .suite import SuiteError, run_suite
+
+
+def _ratio(value: str) -> float:
+    try:
+        result = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a number between 0 and 1") from exc
+    if not math.isfinite(result) or not 0 <= result <= 1:
+        raise argparse.ArgumentTypeError("must be a finite number between 0 and 1")
+    return result
+
+
+def _box(value: str) -> BoundingBox:
+    try:
+        x, y, width, height = (int(part.strip()) for part in value.split(","))
+        return BoundingBox(x=x, y=y, width=width, height=height)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "expected x,y,width,height with nonnegative origin and positive size"
+        ) from exc
+
+
+def _provider_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--provider", choices=("demo", "openai-compatible"), default="demo")
+    parser.add_argument("--base-url", help="OpenAI-compatible API base URL")
+    parser.add_argument("--model", help="Vision model name")
+    parser.add_argument("--api-key-env", default="RENDERWITNESS_API_KEY")
+    parser.add_argument("--timeout", type=float, default=None)
 
 
 def _positive_int(value: str) -> int:
@@ -45,7 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Explain screenshot regressions with deterministic ROIs and optional VLM analysis."
         ),
     )
-    parser.add_argument("--version", action="version", version="RenderWitness 0.1.0")
+    parser.add_argument("--version", action="version", version="RenderWitness 0.2.0")
     commands = parser.add_subparsers(dest="command", required=True)
 
     compare = commands.add_parser("compare", help="Compare baseline and candidate screenshots")
@@ -79,6 +111,13 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--max-image-mb", type=_positive_int, default=25)
     compare.add_argument("--max-pixels", type=_positive_int, default=40_000_000)
     compare.add_argument(
+        "--ignore-region", type=_box, action="append", default=[], metavar="X,Y,W,H"
+    )
+    compare.add_argument("--max-change-ratio", type=_ratio)
+    compare.add_argument("--fail-on-severity", choices=("minor", "major", "critical"))
+    compare.add_argument("--min-confidence", type=_ratio, default=0.8)
+    compare.add_argument("--fail-on-review", action="store_true")
+    compare.add_argument(
         "--fail-on-change",
         action="store_true",
         help="Exit with status 1 when any pixel exceeds the threshold",
@@ -86,6 +125,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     demo = commands.add_parser("demo", help="Generate and analyze a deterministic local example")
     demo.add_argument("-o", "--output", type=Path, default=Path("renderwitness-demo"))
+    suite = commands.add_parser(
+        "suite", help="Run a JSON suite and export HTML, JSON, Markdown, JUnit"
+    )
+    suite.add_argument("config", type=Path)
+    suite.add_argument("-o", "--output", type=Path, default=Path("renderwitness-suite"))
+    _provider_options(suite)
+
+    capture = commands.add_parser(
+        "capture", help="Capture a stable screenshot with optional Playwright"
+    )
+    capture.add_argument("url")
+    capture.add_argument("-o", "--output", required=True, type=Path)
+    capture.add_argument("--width", type=_positive_int, default=1280)
+    capture.add_argument("--height", type=_positive_int, default=800)
+    capture.add_argument("--locale", default="en-US")
+    capture.add_argument(
+        "--color-scheme", choices=("light", "dark", "no-preference"), default="light"
+    )
+    capture.add_argument("--wait-for")
+    capture.add_argument("--mask", action="append", default=[], metavar="SELECTOR")
+    capture.add_argument("--full-page", action="store_true")
+    capture.add_argument("--timeout-ms", type=_positive_int, default=30000)
     return parser
 
 
@@ -116,6 +177,27 @@ def _draw_demo_screen(path: Path, *, candidate: bool) -> None:
 
 
 def _run_compare(args: argparse.Namespace) -> int:
+    output = args.output.expanduser().resolve()
+    artifacts = [
+        output / name for name in ("index.html", "report.json", "gate.json", "comparison.json")
+    ]
+    if any(
+        source.expanduser().resolve() in artifacts for source in (args.baseline, args.candidate)
+    ):
+        raise ReportError("Comparison output must not overwrite a source image")
+    output.mkdir(parents=True, exist_ok=True)
+    # A failed rerun must never leave the previous run's passing artifacts behind.
+    _atomic_write(output / "gate.json", '{"passed": false, "operational_error": true}\n')
+    incomplete = '{"status": "error", "message": "Comparison did not complete."}\n'
+    _atomic_write(output / "report.json", incomplete)
+    _atomic_write(output / "comparison.json", incomplete)
+    _atomic_write(
+        output / "index.html",
+        '<!doctype html><html lang="en"><meta charset="utf-8">'
+        "<title>RenderWitness · incomplete comparison</title>"
+        "<h1>Comparison did not complete</h1><p>This run has no completed report. "
+        "See the command error for details; the CI gate is not passing.</p></html>",
+    )
     max_image_bytes = args.max_image_mb * 1024 * 1024
     api_key = os.getenv(args.api_key_env) if args.api_key_env else None
     provider = create_provider(
@@ -136,13 +218,26 @@ def _run_compare(args: argparse.Namespace) -> int:
         region_padding=args.region_padding,
         max_image_bytes=max_image_bytes,
         max_pixels=args.max_pixels,
+        ignore_regions=args.ignore_region,
     )
-    result = analyze(
-        comparison,
-        args.baseline,
-        args.candidate,
-        provider=provider,
+    args.output.expanduser().mkdir(parents=True, exist_ok=True)
+    _atomic_write(
+        args.output.expanduser() / "comparison.json", comparison.model_dump_json(indent=2) + "\n"
     )
+    failure = None
+    try:
+        result = analyze(comparison, args.baseline, args.candidate, provider=provider)
+    except (ProviderError, AnalysisError, ValidationError) as exc:
+        failure = exc
+        result = AnalysisResult(
+            comparison=comparison,
+            provider="unavailable",
+            verdict=Verdict.REVIEW,
+            summary=(
+                "Semantic analysis unavailable. Deterministic screenshot evidence "
+                "is retained for manual review."
+            ),
+        )
     paths = write_report(
         result,
         args.baseline,
@@ -151,13 +246,30 @@ def _run_compare(args: argparse.Namespace) -> int:
         max_image_bytes=max_image_bytes,
     )
     print(f"Verdict: {result.verdict.value}")
+    compared_pixels = comparison.total_pixels - comparison.ignored_pixels
     print(
-        f"Changed: {comparison.changed_pixels:,}/{comparison.total_pixels:,} "
+        f"Changed: {comparison.changed_pixels:,}/{compared_pixels:,} "
         f"pixels ({comparison.change_ratio:.2%})"
     )
     print(f"HTML: {paths.html}")
     print(f"JSON: {paths.json}")
-    return 1 if args.fail_on_change and not comparison.identical else 0
+    if failure is not None:
+        _atomic_write(
+            args.output.expanduser() / "gate.json", '{"passed": false, "operational_error": true}\n'
+        )
+        raise failure
+    policy = GatePolicy(
+        max_change_ratio=0 if args.fail_on_change else args.max_change_ratio,
+        fail_on_severity=Severity(args.fail_on_severity) if args.fail_on_severity else None,
+        min_confidence=args.min_confidence,
+        fail_on_review=args.fail_on_review,
+    )
+    gate = evaluate_policy(result, policy)
+    _atomic_write(args.output.expanduser() / "gate.json", gate.model_dump_json(indent=2) + "\n")
+    print(f"CI gate: {'passed' if gate.passed else 'failed'}")
+    for reason in gate.reasons:
+        print(f"  {reason}")
+    return 0 if gate.passed else 1
 
 
 def _run_demo(args: argparse.Namespace) -> int:
@@ -207,8 +319,54 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_compare(args)
         if args.command == "demo":
             return _run_demo(args)
+        if args.command == "suite":
+            provider = create_provider(
+                args.provider,
+                base_url=args.base_url,
+                model=args.model,
+                api_key=os.getenv(args.api_key_env) if args.api_key_env else None,
+                timeout=args.timeout,
+            )
+            result = run_suite(args.config, args.output, provider=provider)
+            for case in result.cases:
+                print(
+                    f"{case.status.upper():6} {case.id}" + (f": {case.error}" if case.error else "")
+                )
+            print(f"HTML: {(args.output.expanduser() / 'index.html').resolve()}")
+            return result.exit_code
+        if args.command == "capture":
+            from .capture import CaptureError, CaptureOptions, capture_page
+
+            try:
+                capture = capture_page(
+                    args.url,
+                    args.output,
+                    options=CaptureOptions(
+                        width=args.width,
+                        height=args.height,
+                        locale=args.locale,
+                        color_scheme=args.color_scheme,
+                        wait_for=args.wait_for,
+                        mask_selectors=tuple(args.mask),
+                        full_page=args.full_page,
+                        timeout_ms=args.timeout_ms,
+                    ),
+                )
+            except CaptureError as exc:
+                print(f"renderwitness: error: {exc}", file=sys.stderr)
+                return 2
+            print(f"Screenshot: {capture.screenshot_path}")
+            print(f"Metadata: {capture.manifest_path}")
+            return 0
         parser.error(f"unknown command: {args.command}")
-    except (ComparisonError, ProviderError, AnalysisError, ReportError, ValidationError) as exc:
+    except (
+        ComparisonError,
+        ProviderError,
+        AnalysisError,
+        ReportError,
+        SuiteError,
+        ValidationError,
+    ) as exc:
         print(f"renderwitness: error: {exc}", file=sys.stderr)
         return 2
     except OSError as exc:

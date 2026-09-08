@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Northstar · Workspace overview</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="candidate">
+  <div class="app">
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <a class="brand" href="#overview"><span class="brand-mark">✳</span> northstar</a>
+      <div class="workspace"><strong>Studio workspace</strong><span>工作空间 · Pro plan</span></div>
+      <nav>
+        <a class="active" href="#overview" aria-current="page"><span class="nav-dot"></span>Overview / 概览</a>
+        <a href="#revenue"><span class="nav-dot"></span>Analytics / 分析</a>
+        <a href="#activity"><span class="nav-dot"></span>Activity / 动态</a>
+        <a href="#release"><span class="nav-dot"></span>Settings / 设置</a>
+      </nav>
+      <p class="sidebar-note">A little clarity.<br>A better workday.<br>让每一次进展，都清晰可见。</p>
+    </aside>
+    <div class="content">
+      <header class="topbar">
+        <div class="breadcrumb">Workspace &nbsp; / &nbsp; <b>Overview</b></div>
+        <div class="tools">
+          <time class="clock" id="live-clock" aria-label="Live UTC clock">00:00:00</time>
+          <button class="notification" aria-label="Notifications / 通知">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>
+          </button>
+          <span class="avatar" aria-label="Studio account">ST</span>
+        </div>
+      </header>
+      <main id="overview">
+        <section class="heading" aria-labelledby="page-title">
+          <div>
+            <p class="eyebrow">Your week, at a glance</p>
+            <h1 id="page-title">Good morning, Studio.</h1>
+            <p class="subtitle">欢迎回来。这是你的团队本周进展。 · September 7–13, 2026</p>
+          </div>
+          <button class="export" type="button">Export report / 导出报告 ↗</button>
+        </section>
+        <section class="metrics" aria-label="Key metrics / 关键指标">
+          <article class="metric"><p class="metric-label">Total revenue / 总收入</p><p class="metric-value">$24,680</p><div class="metric-detail"><span class="trend">↗ 12.8%</span><span class="period">vs. last week</span></div></article>
+          <article class="metric"><p class="metric-label">Active users / 活跃用户</p><p class="metric-value">1,842</p><div class="metric-detail"><span class="trend">↗ 8.2%</span><span class="period">vs. last week</span></div></article>
+          <article class="metric"><p class="metric-label">Conversion / 转化率</p><p class="metric-value">4.86%</p><div class="metric-detail"><span class="trend">↗ 0.6%</span><span class="period">vs. last week</span></div></article>
+        </section>
+        <div class="panels">
+          <section class="panel" id="revenue" aria-labelledby="revenue-title">
+            <div class="panel-header"><h2 id="revenue-title">Revenue overview / 收入趋势</h2><span class="badge">This week ▾</span></div>
+            <div class="chart">
+              <svg viewBox="0 0 470 175" preserveAspectRatio="none" role="img" aria-label="Revenue increased throughout the week, with a small dip on Friday.">
+                <defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#b6a2ef" stop-opacity=".27"/><stop offset="100%" stop-color="#b6a2ef" stop-opacity="0"/></linearGradient></defs>
+                <g stroke="#f0eff6" stroke-dasharray="3 4"><path d="M30 25H460M30 65H460M30 105H460M30 145H460"/></g>
+                <g fill="#a6a5b6" font-size="8"><text x="0" y="28">30k</text><text x="0" y="68">20k</text><text x="0" y="108">10k</text><text x="7" y="148">0</text></g>
+                <path d="M30 127C65 127 74 91 100 94S151 122 173 87S220 100 243 57S291 93 318 71S356 77 388 38S426 50 460 20V155H30Z" fill="url(#fill)"/>
+                <path d="M30 127C65 127 74 91 100 94S151 122 173 87S220 100 243 57S291 93 318 71S356 77 388 38S426 50 460 20" fill="none" stroke="#9579dc" stroke-width="2.5"/>
+                <circle cx="460" cy="20" r="4" fill="#9579dc" stroke="white" stroke-width="2"/>
+              </svg>
+              <div class="chart-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+            </div>
+            <p class="chart-caption">Steady progress, every day. / 每一天，都有新的进展。</p>
+          </section>
+          <section class="panel" id="activity" aria-labelledby="activity-title">
+            <div class="panel-header"><h2 id="activity-title">Recent activity / 最新动态</h2><span class="badge">View all</span></div>
+            <ul class="activity-list">
+              <li><span class="event-mark green">✓</span><div class="event-text"><strong>Weekly report is ready</strong><span>周报已生成 · 12 minutes ago</span></div></li>
+              <li><span class="event-mark">↗</span><div class="event-text"><strong>Campaign reached its goal</strong><span>推广目标已达成 · 1 hour ago</span></div></li>
+              <li><span class="event-mark green">+</span><div class="event-text"><strong>3 new team members</strong><span>新成员加入团队 · 2 hours ago</span></div></li>
+            </ul>
+          </section>
+        </div>
+        <section class="release" id="release"><div><h2>Space for your next big idea.</h2><p>Invite your team and build something together. / 邀请团队，一起创造。</p></div><a href="#overview">Explore workspace →</a></section>
+        <p class="fixture-note">RenderWitness local fixture · Fictional data · 无外部网络资源 · Mask #live-clock for repeatable screenshots.</p>
+      </main>
+    </div>
+  </div>
+  <script>
+    const clock = document.getElementById('live-clock');
+    function tick() { clock.textContent = new Date().toISOString().slice(11, 19); }
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>

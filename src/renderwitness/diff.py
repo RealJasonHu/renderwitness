@@ -6,9 +6,18 @@ import hashlib
 import math
 import warnings
 from collections import deque
+from collections.abc import Sequence
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageFilter, ImageOps, ImageStat, UnidentifiedImageError
+from PIL import (
+    Image,
+    ImageChops,
+    ImageDraw,
+    ImageFilter,
+    ImageOps,
+    ImageStat,
+    UnidentifiedImageError,
+)
 
 from .models import BoundingBox, ComparisonResult, DiffRegion, ImageInfo
 
@@ -219,6 +228,7 @@ def compare_images(
     region_padding: int = 24,
     max_image_bytes: int = DEFAULT_MAX_IMAGE_BYTES,
     max_pixels: int = DEFAULT_MAX_PIXELS,
+    ignore_regions: Sequence[BoundingBox] = (),
 ) -> ComparisonResult:
     """Compare two screenshots and return bounded, structured diff regions.
 
@@ -256,6 +266,20 @@ def compare_images(
 
     difference = ImageChops.difference(baseline_image, candidate_image)
     maximum_delta, mask = _pixel_mask(difference, threshold)
+    if len(ignore_regions) > 200:
+        raise ComparisonError("At most 200 ignored regions are allowed")
+    ignored = Image.new("L", baseline_image.size, 0)
+    ignored_draw = ImageDraw.Draw(ignored)
+    for ignored_box in ignore_regions:
+        if ignored_box.right > baseline_image.width or ignored_box.bottom > baseline_image.height:
+            raise ComparisonError("Ignored region exceeds screenshot dimensions")
+        ignored_draw.rectangle(
+            (ignored_box.x, ignored_box.y, ignored_box.right - 1, ignored_box.bottom - 1), fill=255
+        )
+    ignored_pixels = ignored.histogram()[255]
+    if ignored_pixels == baseline_image.width * baseline_image.height:
+        raise ComparisonError("Ignored regions must leave at least one pixel to compare")
+    mask = ImageChops.subtract(mask, ignored)
     histogram = mask.histogram()
     changed_pixels = sum(histogram[1:])
     total_pixels = baseline_image.width * baseline_image.height
@@ -296,7 +320,9 @@ def compare_images(
         region_padding=region_padding,
         changed_pixels=changed_pixels,
         total_pixels=total_pixels,
-        change_ratio=changed_pixels / total_pixels,
+        ignored_regions=list(ignore_regions),
+        ignored_pixels=ignored_pixels,
+        change_ratio=changed_pixels / (total_pixels - ignored_pixels),
         identical=changed_pixels == 0,
         regions=regions,
     )
