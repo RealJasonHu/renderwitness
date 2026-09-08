@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "renderwitness"
-version = "0.1.0"
+version = "0.2.0"
 description = "Evidence-first VLM review for semantic visual regressions"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -38,6 +38,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+capture = ["playwright>=1.51,<2"]
 dev = [
   "build>=1.2,<2",
   "mypy>=1.16,<2",

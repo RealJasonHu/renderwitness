@@ -1,140 +1,207 @@
 <div align="center">
-  <img src="docs/assets/renderwitness-hero.svg" alt="RenderWitness — semantic visual regression review" width="100%" />
+  <img src="docs/assets/workbench.png" alt="Actual RenderWitness report from captured browser fixtures, showing pixel evidence and metric-only findings" width="100%" />
 </div>
+
+<p align="center">Generated from the local browser fixture with the offline demo provider. No VLM call was made.</p>
 
 <p align="center">
   <a href="README.zh-CN.md">中文</a> ·
-  <a href="docs/architecture.md">Architecture</a> ·
-  <a href="docs/model-guide.md">Model guide</a>
+  <a href="docs/workflows.md">Workflows</a> ·
+  <a href="docs/ci.md">CI integration</a> ·
+  <a href="docs/architecture.md">Architecture</a>
 </p>
 
-<p align="center">
-  <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" />
-  <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-53E3C2" />
-  <img alt="Offline demo" src="https://img.shields.io/badge/demo-offline--first-72A7FF" />
-</p>
+# RenderWitness
 
-> Screenshot diffs prove that pixels changed. **RenderWitness tells you whether the experience
-> broke—and keeps the evidence needed to challenge its answer.**
+**Capture screenshots, locate visual changes, and review the evidence before a release.**
 
-RenderWitness is an evidence-first visual regression reviewer for web and desktop interfaces. It
-finds changed regions with a deterministic image pipeline, then asks a vision-language model to
-classify their user impact. The result is a portable HTML + JSON report linking every semantic
-finding back to the exact baseline and candidate pixels.
+RenderWitness is a Python CLI and library for screenshot regression review. It combines deterministic
+pixel comparison with optional vision-language model (VLM) analysis, then packages the screenshots,
+changed regions, findings, and run metadata into a portable report.
 
-It is designed as a real developer tool, not an image-chat wrapper: deterministic ROI detection,
-strict schemas, local-model support, prompt-injection boundaries, reproducible metadata, and CI that
-runs without GPU access or API secrets.
+Use it to investigate a changed UI, run screenshot suites in CI, or add visual evidence to an
+existing test pipeline. Browser capture is optional; screenshots from another test runner or a
+desktop application work too.
 
-## Why it is different
+## What is included
 
-| Layer | What it answers | Trust level |
-|---|---|---|
-| Pixel evidence | Where did rendering change? | Deterministic |
-| VLM review | Is it cosmetic, clipped text, a missing control, layout, or content? | Probabilistic |
-| Evidence report | Can a reviewer audit the answer and reproduce it? | Source-linked |
+| Capability | What you get |
+|---|---|
+| Screenshot comparison | Thresholded RGB differences, bounded regions, source hashes, and image limits |
+| Noise control | Region grouping and padding, plus rectangles excluded from diff metrics |
+| Browser capture | Optional Playwright Chromium capture with viewport, locale, readiness selector, and masks |
+| Scenario suites | Strict JSON configuration, per-case overrides, continued execution after case errors |
+| CI gates | Changed-pixel budget, severity and confidence thresholds, and review handling |
+| Review reports | Side-by-side, blend, and diff views, severity filters, HTML and structured JSON |
+| Suite exports | Navigable HTML index, JSON summary, Markdown summary, and JUnit XML |
+| Model adapters | Network-free metric-only demo or an OpenAI-compatible vision endpoint |
 
-- **Grounded findings** — every claim cites a numbered visual region instead of returning free-form
-  prose.
-- **CJK regression fixture** — the bundled screenshot pair includes a clipped Chinese action label,
-  a missing navigation control, and harmless rendering noise.
-- **Local by default** — use Qwen3-VL through Ollama; no PyTorch stack is installed into the app.
-- **Honest offline mode** — `demo` is deterministic, clearly labeled synthetic behavior for tests
-  and onboarding. It never pretends to be a real model.
-- **Portable artifacts** — reports contain images, boxes, metrics, provider metadata, and validated
-  findings without a database or hosted dashboard.
+Pixel comparison measures rendering changes. Model findings suggest what those changes mean;
+they do not replace screenshot review. The `demo` provider never calls a VLM and does not detect
+semantic defects such as clipped text.
 
-## 30-second demo
+## Start with the offline demo
+
+From a checkout of this repository, using Python 3.11 or later:
 
 ```bash
-python3.12 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
 
 renderwitness demo --output reports/demo
 ```
 
-Open the HTML path printed by the command. The demo is deterministic and needs no API key, network,
-GPU, or model download.
+Open the printed HTML path in a browser. After installation, the demo needs no API key, network,
+GPU, or model download. Its synthetic bilingual dashboard contains intentional visual changes;
+the provider reports only measurable pixel differences.
 
-<details>
-  <summary><strong>Preview the generated evidence report</strong></summary>
-  <br />
-  <img src="docs/assets/report-preview.png" alt="RenderWitness offline evidence report with two grounded regions" width="100%" />
-</details>
-
-Compare your own screenshots in offline evidence mode:
+## Compare two screenshots
 
 ```bash
-renderwitness compare baseline.png candidate.png \
+renderwitness compare examples/baseline.png examples/candidate.png \
   --provider demo \
   --output reports/my-change
 ```
 
-## Run a real local VLM
+The images must have equal dimensions after orientation. PNG, JPEG, WebP, and GIF are supported
+throughout the report pipeline. Animated images are compared using their first frame.
 
-[Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) is a strong fit for multilingual OCR, GUI
-understanding, and visual grounding. Ollama exposes it through an OpenAI-compatible vision endpoint.
+To exclude a known dynamic region and enforce a 1% changed-pixel budget:
 
 ```bash
-ollama pull qwen3-vl:4b
-
-export RENDERWITNESS_BASE_URL=http://localhost:11434/v1
-export RENDERWITNESS_API_KEY=ollama
-export RENDERWITNESS_MODEL=qwen3-vl:4b
-
-renderwitness compare examples/baseline.png examples/candidate.png \
-  --provider openai-compatible \
-  --output reports/qwen3-vl
+renderwitness compare baseline.png candidate.png \
+  --ignore-region 1200,0,240,64 \
+  --max-change-ratio 0.01 \
+  --output reports/release
 ```
 
-The same adapter works with a compatible vLLM or hosted endpoint. See the
-[model guide](docs/model-guide.md) for reproducibility notes.
+The rectangle uses screenshot pixels (`x,y,width,height`) and must fit inside both images.
+The ratio counts only nonignored pixels. Ignored areas are also masked in model inputs, but
+**original images remain visible in reports**. See [workflow details](docs/workflows.md#ignore-dynamic-content).
 
-## Pipeline
+## Run a scenario suite
 
-```text
-baseline + candidate
-        │
-        ▼
-decode, normalize, bound image size
-        │
-        ▼
-thresholded pixel delta → connected ROI evidence
-        │
-        ├──────── demo provider (offline CI)
-        │
-        └──────── OpenAI-compatible VLM (Ollama / vLLM / hosted)
-                         │
-                         ▼
-              strict semantic findings
-                         │
-                         ▼
-           self-contained HTML + JSON report
+```bash
+renderwitness suite examples/suite.json --provider demo --output reports/suite
 ```
 
-The deterministic evidence survives even if the model fails or returns an invalid claim. Read the
-full [architecture note](docs/architecture.md).
+A suite requires a new or empty output directory. This bundled example intentionally returns
+exit code 1: an unchanged control passes, the seeded regression fails, and a review-only case passes.
 
-## Report contract
-
-Findings are validated before rendering and tied to detected evidence:
+A suite compares existing screenshots. Image paths are relative to the configuration file:
 
 ```json
 {
-  "id": "finding-02",
-  "region_id": "region-02",
-  "category": "text",
-  "severity": "major",
-  "title": "Localized CTA is clipped",
-  "description": "The candidate label ends with an ellipsis inside a narrower button.",
-  "confidence": 0.94,
-  "suggestion": "Restore intrinsic sizing and add a zh-CN viewport regression case."
+  "version": 1,
+  "name": "Release screenshots",
+  "defaults": { "threshold": 24 },
+  "policy": { "max_change_ratio": 0.01 },
+  "scenarios": [
+    {
+      "id": "overview-desktop",
+      "name": "Overview at desktop width",
+      "baseline": "baseline.png",
+      "candidate": "candidate.png"
+    }
+  ]
 }
 ```
 
-The JSON output also records image hashes, dimensions, diff thresholds, changed-pixel metrics,
-provider/model identity, and analysis latency.
+Outputs include `index.html`, `summary.json`, `summary.md`, `junit.xml`, and individual case reports.
+A failed case does not prevent later cases from running. The provider verdict and CI gate result
+are separate: the gate fails only when a configured rule is violated.
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Execution completed and configured gates passed |
+| `1` | Execution completed, but at least one configured gate failed |
+| `2` | Configuration, input, capture, provider, or report error; takes precedence over gate failures |
+
+See [CI integration](docs/ci.md) for policy semantics and artifact retention.
+
+## Capture a browser page
+
+Install the optional browser dependency and Chromium once:
+
+```bash
+python -m pip install -e '.[capture]'
+python -m playwright install chromium
+
+renderwitness capture http://localhost:8000/ \
+  --output screenshot.png \
+  --width 1440 --height 900 --locale zh-CN \
+  --wait-for '[data-renderwitness-ready="true"]'
+```
+
+Use the same browser environment, fonts, viewport, and capture settings for both screenshots.
+The repository includes a [bilingual browser fixture](examples/README.md) with intentional
+regressions for trying the complete capture → compare → review workflow.
+
+Run the complete local browser example after installing Chromium:
+
+```bash
+python scripts/run_browser_demo.py --output reports/browser-demo
+```
+
+The script checks two intentionally failing regression cases and an unchanged passing control.
+It returns 0 when those expected outcomes are verified. Open `reports/browser-demo/review/index.html`.
+
+## Add real model analysis
+
+Connect a vision model that accepts the OpenAI-compatible Chat Completions image contract.
+Replace the example model name with a model installed on your local server:
+
+```bash
+export RENDERWITNESS_BASE_URL=http://localhost:11434/v1
+export RENDERWITNESS_MODEL=your-vision-model
+export RENDERWITNESS_API_KEY=ollama
+
+renderwitness compare examples/baseline.png examples/candidate.png \
+  --provider openai-compatible \
+  --output reports/model-review
+```
+
+The adapter sends normalized screenshots with ignored areas masked, plus region metadata. It validates returned JSON and checks
+region references. A finding may explicitly have no region reference. Validation confirms the
+expected structure; it does not establish that the interpretation is correct.
+
+See the [model guide](docs/model-guide.md) for endpoint requirements, data handling, and failure
+behavior. Real-model accuracy has not been established by the offline demo or CI tests.
+
+## How it fits together
+
+```text
+URL → optional Chromium capture → screenshots
+                                      │
+baseline + candidate → validated image pair
+                              │
+                    pixel diff + ignore regions
+                              │
+                    bounded visual evidence
+                              │
+               demo metrics / optional VLM review
+                              │
+                     structured validation
+                              │
+               HTML + JSON → explicit CI policy
+                              │
+                 suite index / Markdown / JUnit
+```
+
+## Documentation
+
+| Guide | Start here when you want to… |
+|---|---|
+| [Workflows](docs/workflows.md) | Tune comparisons, capture pages, or author a suite |
+| [Browser capture](docs/capture.md) | Use the Python capture API and inspect capture provenance |
+| [CI integration](docs/ci.md) | Configure gates and keep reports from failing runs |
+| [Architecture](docs/architecture.md) | Understand the algorithm, contracts, and tradeoffs |
+| [Model guide](docs/model-guide.md) | Connect and evaluate a real vision model |
+| [Examples](examples/README.md) | Reproduce screenshot and browser fixtures |
+| [Contributing](CONTRIBUTING.md) | Set up development and validate a change |
+| [Changelog](CHANGELOG.md) | See versioned changes |
+| [Security](SECURITY.md) | Report vulnerabilities and understand data considerations |
 
 ## Development
 
@@ -143,23 +210,26 @@ python -m pip install -e '.[dev]'
 make test
 make lint
 make coverage
+python -m build
 ```
 
-CI tests Python 3.11–3.13, builds the package and OCI image, and publishes the offline evidence
-report as an artifact. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Tests run without model credentials. Browser smoke tests additionally require the `capture`
+extra and installed Chromium. See [Contributing](CONTRIBUTING.md).
 
-## Current scope
+Repository CI checks Python 3.11–3.13, package builds, and the documented suite outcomes. A separate
+Chromium job checks actual capture and report interactions, then saves the browser example report.
 
-Version 0.1 compares equal-size PNG/JPEG/WebP screenshot pairs. VLM findings are reviewer aids, not
-proof of accessibility, security, or release readiness. Generated bounding boxes identify source
-diff regions; they do not establish causality.
+## Current boundaries
 
-Next milestones are Playwright scenario capture, rootless Podman baseline/candidate runners,
-DOM/accessibility-tree evidence, a fault-injection benchmark, and pull-request annotations.
+- This is an alpha tool. Version 0.2 adds capture and CI workflows, but does not manage baseline
+  approval, authentication flows, browser interactions, or screenshot storage.
+- Pixel thresholds do not establish intent, accessibility, or functional correctness. Small changes
+  can matter; large changes can be intentional. Diff regions are approximate connected components.
+- Model confidence is provider-reported, not a calibrated probability. Evaluate semantic gates on
+  your own cases before they control a release.
+- Capture uses Chromium. Cross-browser orchestration, DOM/accessibility-tree evidence, rootless
+  baseline/candidate container orchestration, and PR annotations remain future work.
+- Reports embed source screenshots and include paths and metadata. Review their contents before
+  sharing them. Ignore regions do not redact report screenshots.
 
-## Author
-
-Built by [Zhexun Hu](https://github.com/RealJasonHu) as a focused portfolio project across VLM
-engineering, visual testing, developer tooling, and containers.
-
-Licensed under the [MIT License](LICENSE).
+Created by [Zhexun Hu](https://github.com/RealJasonHu). Licensed under the [MIT License](LICENSE).

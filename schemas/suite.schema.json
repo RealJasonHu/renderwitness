@@ -1,0 +1,242 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "additionalProperties": false,
+      "description": "Pixel-space rectangle, using an exclusive right and bottom edge.",
+      "properties": {
+        "x": {
+          "minimum": 0,
+          "title": "X",
+          "type": "integer"
+        },
+        "y": {
+          "minimum": 0,
+          "title": "Y",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "DiffOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "threshold": {
+          "default": 24,
+          "maximum": 255,
+          "minimum": 0,
+          "title": "Threshold",
+          "type": "integer"
+        },
+        "min_region_area": {
+          "default": 16,
+          "minimum": 1,
+          "title": "Min Region Area",
+          "type": "integer"
+        },
+        "max_regions": {
+          "default": 20,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Max Regions",
+          "type": "integer"
+        },
+        "grouping_distance": {
+          "default": 8,
+          "maximum": 128,
+          "minimum": 0,
+          "title": "Grouping Distance",
+          "type": "integer"
+        },
+        "region_padding": {
+          "default": 24,
+          "maximum": 256,
+          "minimum": 0,
+          "title": "Region Padding",
+          "type": "integer"
+        },
+        "max_image_bytes": {
+          "default": 26214400,
+          "minimum": 1,
+          "title": "Max Image Bytes",
+          "type": "integer"
+        },
+        "max_pixels": {
+          "default": 40000000,
+          "minimum": 1,
+          "title": "Max Pixels",
+          "type": "integer"
+        }
+      },
+      "title": "DiffOptions",
+      "type": "object"
+    },
+    "GatePolicy": {
+      "additionalProperties": false,
+      "description": "Opt-in thresholds; an empty policy never fails a completed comparison.",
+      "properties": {
+        "max_change_ratio": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Change Ratio"
+        },
+        "fail_on_severity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Severity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "min_confidence": {
+          "default": 0.8,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Confidence",
+          "type": "number"
+        },
+        "fail_on_review": {
+          "default": false,
+          "title": "Fail On Review",
+          "type": "boolean"
+        }
+      },
+      "title": "GatePolicy",
+      "type": "object"
+    },
+    "Scenario": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "baseline": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Baseline",
+          "type": "string"
+        },
+        "candidate": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Candidate",
+          "type": "string"
+        },
+        "ignore_regions": {
+          "items": {
+            "$ref": "#/$defs/BoundingBox"
+          },
+          "maxItems": 200,
+          "title": "Ignore Regions",
+          "type": "array"
+        },
+        "diff": {
+          "$ref": "#/$defs/DiffOptions"
+        },
+        "policy": {
+          "$ref": "#/$defs/GatePolicy"
+        }
+      },
+      "required": [
+        "id",
+        "baseline",
+        "candidate"
+      ],
+      "title": "Scenario",
+      "type": "object"
+    },
+    "Severity": {
+      "description": "Impact level assigned to a visual finding.",
+      "enum": [
+        "ignore",
+        "minor",
+        "major",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1,
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "name": {
+      "default": "Visual regression suite",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "defaults": {
+      "$ref": "#/$defs/DiffOptions"
+    },
+    "policy": {
+      "$ref": "#/$defs/GatePolicy"
+    },
+    "scenarios": {
+      "items": {
+        "$ref": "#/$defs/Scenario"
+      },
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Scenarios",
+      "type": "array"
+    }
+  },
+  "required": [
+    "scenarios"
+  ],
+  "title": "SuiteConfig",
+  "type": "object"
+}

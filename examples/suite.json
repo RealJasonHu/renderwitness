@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "name": "Bilingual dashboard release checks",
+  "defaults": { "threshold": 24, "min_region_area": 16, "region_padding": 24 },
+  "policy": { "max_change_ratio": 0 },
+  "scenarios": [
+    {
+      "id": "unchanged-control",
+      "name": "Unchanged dashboard · control",
+      "baseline": "baseline.png",
+      "candidate": "baseline.png"
+    },
+    {
+      "id": "bilingual-regression",
+      "name": "Chinese CTA and missing control · strict pixel gate",
+      "baseline": "baseline.png",
+      "candidate": "candidate.png"
+    },
+    {
+      "id": "review-only",
+      "name": "Same regression · collect evidence without blocking",
+      "baseline": "baseline.png",
+      "candidate": "candidate.png",
+      "ignore_regions": [{ "x": 1204, "y": 25, "width": 42, "height": 42 }],
+      "policy": { "max_change_ratio": null }
+    }
+  ]
+}

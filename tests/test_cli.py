@@ -132,4 +132,4 @@ def test_cli_version_is_available_without_reading_images(
         main(["--version"])
 
     assert exc_info.value.code == 0
-    assert capsys.readouterr().out.strip() == "RenderWitness 0.1.0"
+    assert capsys.readouterr().out.strip() == "RenderWitness 0.2.0"
