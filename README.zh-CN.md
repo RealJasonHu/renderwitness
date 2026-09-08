@@ -134,7 +134,7 @@ export RENDERWITNESS_BASE_URL=http://localhost:11434/v1
 export RENDERWITNESS_MODEL=your-vision-model
 export RENDERWITNESS_API_KEY=ollama
 
-renderwitness compare examples/baseline.png examples/candidate.png \
+renderwitness compare examples/baseline.png candidate.png \
   --provider openai-compatible \
   --output reports/model-review
 ```
@@ -179,4 +179,4 @@ python -m build
 - 浏览器采集使用 Chromium。跨浏览器编排、DOM／无障碍树证据、baseline／candidate 容器编排和 PR 注释尚未实现。
 - 报告嵌入原始截图，并包含路径和元数据；分享前需要查看实际内容。忽略区域不能用于隐私脱敏。
 
-由 [Zhexun Hu](https://github.com/RealJasonHu) 创建，采用 [MIT License](LICENSE)。
+由 [Jason Hu](https://github.com/RealJasonHu) 创建，采用 [MIT License](LICENSE)。
