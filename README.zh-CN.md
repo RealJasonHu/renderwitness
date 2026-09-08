@@ -134,7 +134,7 @@ export RENDERWITNESS_BASE_URL=http://localhost:11434/v1
 export RENDERWITNESS_MODEL=your-vision-model
 export RENDERWITNESS_API_KEY=ollama
 
-renderwitness compare examples/baseline.png candidate.png \
+renderwitness compare examples/baseline.png examples/candidate.png \
   --provider openai-compatible \
   --output reports/model-review
 ```
