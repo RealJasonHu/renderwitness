@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [
-  { name = "Zhexun Hu", email = "huzhexun1@gmail.com" },
+  { name = "Jason Hu", email = "huzhexun1@gmail.com" },
 ]
 keywords = [
   "vlm",
